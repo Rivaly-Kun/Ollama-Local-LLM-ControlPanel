@@ -2,8 +2,6 @@
 
 A premium, high-performance React dashboard for managing and chatting with local Large Language Models (LLMs) via **Ollama**.
 
-![App Screenshot](https://raw.githubusercontent.com/shadcn-ui/ui/main/apps/www/public/og.png) *(Placeholder - replace with actual screenshot)*
-
 ## 🚀 Overview
 
 This system is a private, local-first AI workspace. It connects directly to your local Ollama instance, allowing you to run models like DeepSeek, Llama 3, Qwen, and Phi-3 with full data privacy.
@@ -81,5 +79,3 @@ Unlike basic chat UIs, this system implements a structured database using **Inde
 When enabled via the Task Router, you can select multiple checkboxes in the sidebar. Sending a message will trigger parallel streaming requests to all selected models, allowing for instant performance and logic comparison.
 
 ---
-
-*Developed for high-performance local AI workflows.*
