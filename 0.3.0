@@ -1,0 +1,215 @@
+Collecting llama-cpp-python
+  Downloading llama_cpp_python-0.3.21.tar.gz (67.6 MB)
+     ---------------------------------------- 67.6/67.6 MB 20.3 MB/s  0:00:03
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'done'
+Collecting typing-extensions>=4.5.0 (from llama-cpp-python)
+  Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting numpy>=1.20.0 (from llama-cpp-python)
+  Downloading numpy-2.4.4-cp312-cp312-win_amd64.whl.metadata (6.6 kB)
+Collecting diskcache>=5.6.1 (from llama-cpp-python)
+  Downloading diskcache-5.6.3-py3-none-any.whl.metadata (20 kB)
+Collecting jinja2>=2.11.3 (from llama-cpp-python)
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting MarkupSafe>=2.0 (from jinja2>=2.11.3->llama-cpp-python)
+  Downloading markupsafe-3.0.3-cp312-cp312-win_amd64.whl.metadata (2.8 kB)
+Downloading diskcache-5.6.3-py3-none-any.whl (45 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.3-cp312-cp312-win_amd64.whl (15 kB)
+Downloading numpy-2.4.4-cp312-cp312-win_amd64.whl (12.3 MB)
+   ---------------------------------------- 12.3/12.3 MB 22.0 MB/s  0:00:00
+Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+Building wheels for collected packages: llama-cpp-python
+  Building wheel for llama-cpp-python (pyproject.toml): started
+  Building wheel for llama-cpp-python (pyproject.toml): finished with status 'error'
+  error: subprocess-exited-with-error
+  
+  Building wheel for llama-cpp-python (pyproject.toml) did not run successfully.
+  exit code: 1
+  
+  [169 lines of output]
+  *** scikit-build-core 0.12.2 using CMake 4.3.2 (wheel)
+  *** Configuring CMake...
+  2026-05-01 04:11:27,966 - scikit_build_core - WARNING - Can't find a Python library, got libdir=None, ldlibrary=None, multiarch=None, masd=None
+  loading initial cache file C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeInit.txt
+  CMake Error: CMAKE_GENERATOR was set but the specified generator doesn't exist. Using CMake default.
+  -- Building for: Visual Studio 17 2022
+  -- Selecting Windows SDK version 10.0.22621.0 to target Windows 10.0.26200.
+  -- The C compiler identification is MSVC 19.44.35217.0
+  -- The CXX compiler identification is MSVC 19.44.35217.0
+  -- Detecting C compiler ABI info
+  -- Detecting C compiler ABI info - done
+  -- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+  -- Detecting C compile features
+  -- Detecting C compile features - done
+  -- Detecting CXX compiler ABI info
+  -- Detecting CXX compiler ABI info - done
+  -- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+  -- Detecting CXX compile features
+  -- Detecting CXX compile features - done
+  CMAKE_BUILD_TYPE=
+  -- Found Git: C:/Program Files/Git/cmd/git.exe (found version "2.51.0.windows.2")
+  -- The ASM compiler identification is MSVC
+  CMake Warning (dev) at C:/Users/gabri/AppData/Local/Temp/pip-build-env-uuvsmjm_/normal/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDetermineASMCompiler.cmake:234 (message):
+    Policy CMP194 is not set: MSVC is not an assembler for language ASM.  Run
+    "cmake --help-policy CMP194" for policy details.  Use the cmake_policy
+    command to set the policy and suppress this warning.
+  Call Stack (most recent call first):
+    vendor/llama.cpp/ggml/CMakeLists.txt:3 (project)
+  This warning is for project developers.  Use -Wno-dev to suppress it.
+  
+  -- Found assembler: C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe
+  -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+  -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Failed
+  -- Looking for pthread_create in pthreads
+  -- Looking for pthread_create in pthreads - not found
+  -- Looking for pthread_create in pthread
+  -- Looking for pthread_create in pthread - not found
+  -- Found Threads: TRUE
+  -- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+  -- CMAKE_SYSTEM_PROCESSOR: AMD64
+  -- CMAKE_GENERATOR_PLATFORM:
+  -- GGML_SYSTEM_ARCH: x86
+  -- Including CPU backend
+  -- Found OpenMP_C: -openmp (found version "2.0")
+  -- Found OpenMP_CXX: -openmp (found version "2.0")
+  -- Found OpenMP: TRUE (found version "2.0")
+  -- x86 detected
+  -- Performing Test HAS_AVX_1
+  -- Performing Test HAS_AVX_1 - Success
+  -- Performing Test HAS_AVX2_1
+  -- Performing Test HAS_AVX2_1 - Success
+  -- Performing Test HAS_FMA_1
+  -- Performing Test HAS_FMA_1 - Success
+  -- Performing Test HAS_AVX512_1
+  -- Performing Test HAS_AVX512_1 - Failed
+  -- Performing Test HAS_AVX512_2
+  -- Performing Test HAS_AVX512_2 - Failed
+  -- Adding CPU backend variant ggml-cpu: /arch:AVX2 GGML_AVX2;GGML_FMA;GGML_F16C
+  -- Found CUDAToolkit: C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v13.2/include (found version "13.2.78")
+  -- CUDA Toolkit found
+  CMake Error at C:/Users/gabri/AppData/Local/Temp/pip-build-env-uuvsmjm_/normal/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:934 (message):
+    Compiling the CUDA compiler identification source file
+    "CMakeCUDACompilerId.cu" failed.
+  
+    Compiler:
+  
+    Build flags:
+  
+    Id flags: --keep;--keep-dir;tmp -v
+  
+  
+  
+    The output was:
+  
+    1
+  
+    MSBuild version 17.14.23+b0019275e for .NET Framework
+  
+    Build started 01/05/2026 4:11:53 am.
+  
+  
+  
+    Project
+    "C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj"
+    on node 1 (default targets).
+  
+    PrepareForBuild:
+  
+      Creating directory "Debug\".
+  
+    C:\Program Files\Microsoft Visual
+    Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(548,5):
+    warning MSB8029: The Intermediate directory or Output directory cannot
+    reside under the Temporary directory as it could lead to issues with
+    incremental build.
+    [C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj]
+  
+      Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
+      Creating directory "Debug\CompilerIdCUDA.tlog\".
+  
+    InitializeBuildStatus:
+  
+      Creating "Debug\CompilerIdCUDA.tlog\unsuccessfulbuild" because "AlwaysCreate" was specified.
+      Touching "Debug\CompilerIdCUDA.tlog\unsuccessfulbuild".
+  
+    AddCudaCompileDeps:
+  
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\bin\HostX64\x64\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=13 /D__CUDACC_VER_MINOR__=2 /D_MBCS /I"%CUDA_PATH% \include" /I"%CUDA_PATH% \bin" /I"%CUDA_PATH% \include" /I. /FIcuda_runtime.h /c C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CMakeCUDACompilerId.cu
+  
+    C:\Program Files\Microsoft Visual
+    Studio\2022\Community\MSBuild\Microsoft\VC\v170\BuildCustomizations\CUDA
+    13.2.targets(609,9): error : The CUDA Toolkit directory '%CUDA_PATH% \'
+    does not exist.  Please verify the CUDA Toolkit is installed properly or
+    define the CudaToolkitDir property to resolve this error.
+    [C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj]
+  
+    Done Building Project
+    "C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj"
+    (default targets) -- FAILED.
+  
+  
+  
+    Build FAILED.
+  
+  
+  
+  
+    "C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj"
+    (default target) (1) ->
+  
+    (PrepareForBuild target) ->
+  
+      C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\Microsoft.CppBuild.targets(548,5): warning MSB8029: The Intermediate directory or Output directory cannot reside under the Temporary directory as it could lead to issues with incremental build. [C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj]
+  
+  
+  
+  
+  
+  
+    "C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj"
+    (default target) (1) ->
+  
+    (ValidateCudaBuild target) ->
+  
+      C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Microsoft\VC\v170\BuildCustomizations\CUDA 13.2.targets(609,9): error : The CUDA Toolkit directory '%CUDA_PATH% \' does not exist.  Please verify the CUDA Toolkit is installed properly or define the CudaToolkitDir property to resolve this error. [C:\Users\gabri\AppData\Local\Temp\tmpoft6dyzh\build\CMakeFiles\4.3.2\CompilerIdCUDA\CompilerIdCUDA.vcxproj]
+  
+  
+  
+        1 Warning(s)
+        1 Error(s)
+  
+  
+  
+    Time Elapsed 00:00:00.48
+  
+  
+  
+  
+  
+  Call Stack (most recent call first):
+    C:/Users/gabri/AppData/Local/Temp/pip-build-env-uuvsmjm_/normal/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)
+    C:/Users/gabri/AppData/Local/Temp/pip-build-env-uuvsmjm_/normal/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDetermineCompilerId.cmake:53 (__determine_compiler_id_test)
+    C:/Users/gabri/AppData/Local/Temp/pip-build-env-uuvsmjm_/normal/Lib/site-packages/cmake/data/share/cmake-4.3/Modules/CMakeDetermineCUDACompiler.cmake:163 (CMAKE_DETERMINE_COMPILER_ID)
+    vendor/llama.cpp/ggml/src/ggml-cuda/CMakeLists.txt:58 (enable_language)
+  
+  
+  -- Configuring incomplete, errors occurred!
+  
+  *** CMake configuration failed
+  [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+  ERROR: Failed building wheel for llama-cpp-python
+Failed to build llama-cpp-python
+error: failed-wheel-build-for-install
+
+Failed to build installable wheels for some pyproject.toml based projects
+
+llama-cpp-python

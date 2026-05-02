@@ -1,1 +1,7 @@
 node_modules
+models/
+server/.venv/
+server/__pycache__/
+*.gguf
+.env
+dist/

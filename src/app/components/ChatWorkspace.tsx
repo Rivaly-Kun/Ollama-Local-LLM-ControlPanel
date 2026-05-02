@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import type { Model } from './ModelSidebar';
-import { chatCompletionStream, type ChatMessage as OllamaChatMessage } from '../services/ollama';
+import { chatCompletionStream, type ChatMessage as LLMChatMessage } from '../services/llm';
 import {
   saveConversation,
   listConversations,
@@ -33,7 +33,7 @@ type Props = {
   models: Model[];
   mode: 'single' | 'compare';
   activeModel: string | null;
-  getOllamaTag: (modelId: string) => string;
+  getModelTag: (modelId: string) => string;
   input: string;
   setInput: (val: string) => void;
   attachedFiles: AttachedFile[];
@@ -78,7 +78,7 @@ function storedToMessages(stored: StoredMessage[]): Message[] {
   }));
 }
 
-export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOllamaTag, input, setInput, attachedFiles, onRemoveFile, onClearFiles, activeSupportsVision }: Props) {
+export function ChatWorkspace({ selectedModels, models, mode, activeModel, getModelTag, input, setInput, attachedFiles, onRemoveFile, onClearFiles, activeSupportsVision }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   // input state is now lifted to props
   const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set());
@@ -86,8 +86,8 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // History of messages sent to Ollama (per conversation)
-  const historyRef = useRef<OllamaChatMessage[]>([]);
+  // History of messages sent to backend (per conversation)
+  const historyRef = useRef<LLMChatMessage[]>([]);
 
   // ── Chat history state ─────────────────────────────────────────────
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -155,7 +155,7 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
     setConversationTitle(convo.title);
     setShowHistory(false);
 
-    // Rebuild Ollama history
+    // Rebuild chat history
     historyRef.current = convo.messages
       .filter(m => m.content)
       .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
@@ -192,7 +192,7 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
     msgId: string,
     images: string[] = [],
   ) => {
-    const ollamaTag = getOllamaTag(modelId);
+    const modelTag = getModelTag(modelId);
     const startTime = performance.now();
 
     const placeholderId = `${msgId}-${modelId}`;
@@ -208,12 +208,12 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
 
     setMessages(prev => [...prev, placeholder]);
 
-    const userMsg: OllamaChatMessage = { role: 'user', content: userContent };
+    const userMsg: LLMChatMessage = { role: 'user', content: userContent };
     if (images.length > 0) {
       userMsg.images = images;
     }
 
-    const ollamaMessages: OllamaChatMessage[] = [
+    const chatMessages: LLMChatMessage[] = [
       ...historyRef.current,
       userMsg,
     ];
@@ -223,8 +223,8 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
 
     try {
       await chatCompletionStream(
-        ollamaTag,
-        ollamaMessages,
+        modelTag,
+        chatMessages,
         (token) => {
           setMessages(prev =>
             prev.map(m =>
@@ -275,7 +275,7 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
               ? {
                   ...m,
                   isStreaming: false,
-                  content: `⚠️ Error: ${errorMsg}\n\nMake sure Ollama is running and the model "${ollamaTag}" is available.`,
+                  content: `⚠️ Error: ${errorMsg}\n\nMake sure the backend server is running and the model "${modelTag}" is available.`,
                 }
               : m
           )
@@ -492,7 +492,7 @@ export function ChatWorkspace({ selectedModels, models, mode, activeModel, getOl
           {messages.length === 0 && (
             <div className="text-center text-gray-500 py-12">
               <p className="text-white text-lg mb-1">Start a conversation with your local LLMs</p>
-              <p className="text-sm text-gray-500 mt-2">Connected to Ollama at localhost:11434</p>
+              <p className="text-sm text-gray-500 mt-2">Connected to local LLM backend</p>
             </div>
           )}
 

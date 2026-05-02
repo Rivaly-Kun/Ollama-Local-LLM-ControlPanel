@@ -222,7 +222,7 @@ export function TaskPanel({ mode, onModeChange, onSelectTemplate, onFilesAttache
                 <div className="flex items-start gap-1.5 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
                   <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
                   <p className="text-xs text-yellow-400/90">
-                    Switch to <strong>Gemma 12B</strong> for image analysis. Text files work with all models.
+                    Text files work with all models. Vision support is not currently available.
                   </p>
                 </div>
               )}
@@ -257,10 +257,10 @@ export function TaskPanel({ mode, onModeChange, onSelectTemplate, onFilesAttache
 
           {/* API Endpoint */}
           <div>
-            <Label className="mb-2 block text-white">Ollama Endpoint</Label>
+            <Label className="mb-2 block text-white">Backend Endpoint</Label>
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-gray-400" />
-              <code className="text-xs bg-muted px-2 py-1 rounded text-white">localhost:11434</code>
+              <code className="text-xs bg-muted px-2 py-1 rounded text-white">localhost:8321</code>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

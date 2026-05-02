@@ -35,13 +35,12 @@ export default defineConfig({
     },
   },
 
-  // Proxy Ollama REST API to avoid CORS in the browser
+  // Proxy API requests to the local Python LLM backend
   server: {
     proxy: {
-      '/ollama': {
-        target: 'http://localhost:11434',
+      '/api': {
+        target: 'http://localhost:8321',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/ollama/, ''),
       },
     },
   },

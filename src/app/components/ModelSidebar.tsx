@@ -39,7 +39,7 @@ type Props = {
   onToggleModel: (modelId: string) => void;
   onSelectModel: (modelId: string) => void;
   activeModel: string | null;
-  ollamaOnline?: boolean;
+  backendOnline?: boolean;
 };
 
 export function ModelSidebar({
@@ -48,7 +48,7 @@ export function ModelSidebar({
   onToggleModel,
   onSelectModel,
   activeModel,
-  ollamaOnline = false,
+  backendOnline = false,
 }: Props) {
   const loadedCount = models.filter((m) => m.status === "loaded").length;
 
@@ -138,23 +138,23 @@ export function ModelSidebar({
           </span>
         </div>
 
-        {/* Ollama connection status */}
+        {/* Backend connection status */}
         <div style={{
           display: "flex", alignItems: "center", gap: "0.35rem",
           marginTop: "0.45rem",
         }}>
           <span style={{
             width: 6, height: 6, borderRadius: "50%",
-            background: ollamaOnline ? "#4ade80" : "#ef4444",
-            boxShadow: ollamaOnline ? "0 0 6px #4ade80" : "0 0 6px #ef4444",
+            background: backendOnline ? "#4ade80" : "#ef4444",
+            boxShadow: backendOnline ? "0 0 6px #4ade80" : "0 0 6px #ef4444",
             display: "inline-block",
           }} />
           <span style={{
             fontSize: "0.68rem",
-            color: ollamaOnline ? "#4ade80" : "#ef4444",
+            color: backendOnline ? "#4ade80" : "#ef4444",
             fontWeight: 500,
           }}>
-            {ollamaOnline ? "Ollama connected" : "Ollama offline"}
+            {backendOnline ? "Backend connected" : "Backend offline"}
           </span>
         </div>
       </div>

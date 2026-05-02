@@ -1,12 +1,12 @@
-// ── Ollama REST API service ──────────────────────────────────────────
-// All requests go through the Vite dev-server proxy (/ollama → localhost:11434)
+// ── Local LLM Backend API service ────────────────────────────────────
+// All requests go through the Vite dev-server proxy (/api → localhost:8321)
 // so there are no CORS issues in the browser.
 
-const BASE = '/ollama';
+const BASE = '/api';
 
 // ── Types ────────────────────────────────────────────────────────────
 
-export type OllamaModel = {
+export type LLMModel = {
   name: string;
   model: string;
   modified_at: string;
@@ -20,9 +20,10 @@ export type OllamaModel = {
     parameter_size: string;
     quantization_level: string;
   };
+  downloaded?: boolean;
 };
 
-export type OllamaRunningModel = {
+export type RunningModel = {
   name: string;
   model: string;
   size: number;
@@ -36,20 +37,20 @@ export type ChatMessage = {
   images?: string[]; // base64-encoded images for vision models
 };
 
-// ── List all locally-available models (/api/tags) ────────────────────
+// ── List all available models (/api/tags) ────────────────────────────
 
-export async function listModels(): Promise<OllamaModel[]> {
-  const res = await fetch(`${BASE}/api/tags`);
-  if (!res.ok) throw new Error(`Ollama /api/tags failed: ${res.status}`);
+export async function listModels(): Promise<LLMModel[]> {
+  const res = await fetch(`${BASE}/tags`);
+  if (!res.ok) throw new Error(`/api/tags failed: ${res.status}`);
   const data = await res.json();
   return data.models ?? [];
 }
 
 // ── List currently-loaded (running) models (/api/ps) ─────────────────
 
-export async function listRunningModels(): Promise<OllamaRunningModel[]> {
-  const res = await fetch(`${BASE}/api/ps`);
-  if (!res.ok) throw new Error(`Ollama /api/ps failed: ${res.status}`);
+export async function listRunningModels(): Promise<RunningModel[]> {
+  const res = await fetch(`${BASE}/ps`);
+  if (!res.ok) throw new Error(`/api/ps failed: ${res.status}`);
   const data = await res.json();
   return data.models ?? [];
 }
@@ -60,7 +61,7 @@ export async function chatCompletion(
   model: string,
   messages: ChatMessage[],
 ): Promise<{ content: string; totalDuration: number; evalCount: number }> {
-  const res = await fetch(`${BASE}/api/chat`, {
+  const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages, stream: false }),
@@ -68,7 +69,7 @@ export async function chatCompletion(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Ollama /api/chat failed (${res.status}): ${errText}`);
+    throw new Error(`/api/chat failed (${res.status}): ${errText}`);
   }
 
   const data = await res.json();
@@ -88,7 +89,7 @@ export async function chatCompletionStream(
   onDone: (stats: { totalDuration: number; evalCount: number }) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/api/chat`, {
+  const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model, messages, stream: true }),
@@ -97,7 +98,7 @@ export async function chatCompletionStream(
 
   if (!res.ok) {
     const errText = await res.text();
-    throw new Error(`Ollama /api/chat failed (${res.status}): ${errText}`);
+    throw new Error(`/api/chat failed (${res.status}): ${errText}`);
   }
 
   const reader = res.body?.getReader();
@@ -113,7 +114,7 @@ export async function chatCompletionStream(
 
     buffer += decoder.decode(value, { stream: true });
 
-    // Ollama sends newline-delimited JSON
+    // Server sends newline-delimited JSON
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
 
@@ -139,11 +140,26 @@ export async function chatCompletionStream(
   onDone(lastStats);
 }
 
-// ── Check if Ollama is reachable ─────────────────────────────────────
+// ── Check if the backend is reachable ────────────────────────────────
 
-export async function pingOllama(): Promise<boolean> {
+export async function pingBackend(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    const res = await fetch(`${BASE}/health`, { signal: AbortSignal.timeout(3000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// ── Trigger model download ───────────────────────────────────────────
+
+export async function downloadModel(modelTag: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${BASE}/download`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: modelTag }),
+    });
     return res.ok;
   } catch {
     return false;
