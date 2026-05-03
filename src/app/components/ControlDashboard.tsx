@@ -225,7 +225,8 @@ export function ControlDashboard({
       {/* ── Scrollable content area ── */}
       <div
         style={{
-          flex: logsExpanded ? '0 0 auto' : 1,
+          flex: 1,
+          minHeight: 0,
           overflowY: 'auto',
           padding: '1.5rem',
           scrollbarWidth: 'thin',
