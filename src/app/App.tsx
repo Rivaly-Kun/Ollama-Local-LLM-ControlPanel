@@ -1,20 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ModelSidebar, type Model } from './components/ModelSidebar';
-import { ChatWorkspace } from './components/ChatWorkspace';
-import { TaskPanel } from './components/TaskPanel';
-import { listModels, listRunningModels, pingBackend } from './services/llm';
+import { ControlDashboard } from './components/ControlDashboard';
+import { listModels, listRunningModels, pingBackend, toggleModel as toggleModelApi, getDisabledModels } from './services/llm';
+import { useServerLogs } from './services/serverLogs';
 
 // ── Model definitions matching the Python backend's model registry ───
-// The `modelTag` field is the exact tag the backend expects.
-
-export type AttachedFile = {
-  id: string;
-  name: string;
-  type: string; // MIME type
-  base64: string; // raw base64 data (no prefix)
-  isImage: boolean;
-  preview?: string; // data URL for image preview
-};
 
 const MODEL_DEFS: (Omit<Model, 'status'> & { modelTag: string })[] = [
   {
@@ -94,10 +84,12 @@ export default function App() {
     MODEL_DEFS.map(d => ({ ...d, status: 'unloaded' as const }))
   );
   const [backendOnline, setBackendOnline] = useState(false);
-  const [selectedModels, setSelectedModels] = useState<string[]>(['llama3-8b']);
-  const [activeModel, setActiveModel] = useState<string | null>('llama3-8b');
-  const [mode, setMode] = useState<'single' | 'compare'>('single');
+  const [enabledModels, setEnabledModels] = useState<Set<string>>(
+    () => new Set(MODEL_DEFS.map(d => d.id)) // all enabled by default
+  );
 
+  // ── Server logs ─────────────────────────────────────────────────────
+  const { logs, serverStatus, usageStats, clearLogs } = useServerLogs(true);
 
   // ── Poll backend for model availability ─────────────────────────────
   const refreshStatus = useCallback(async () => {
@@ -117,7 +109,7 @@ export default function App() {
       const availableNames = new Set(available.map(m => m.name));
       const runningNames = new Set(running.map(m => m.name));
 
-      // Check which models have been downloaded (extra field from our backend)
+      // Check which models have been downloaded
       const downloadedNames = new Set(
         available
           .filter(m => (m as any).downloaded)
@@ -125,8 +117,6 @@ export default function App() {
       );
 
       setModels(MODEL_DEFS.map(d => {
-        const isAvailable = availableNames.has(d.modelTag) ||
-          [...availableNames].some(n => n.startsWith(d.modelTag.split(':')[0]));
         const isDownloaded = downloadedNames.has(d.modelTag);
         const isRunning = runningNames.has(d.modelTag) ||
           [...runningNames].some(n => n.startsWith(d.modelTag.split(':')[0]));
@@ -134,7 +124,6 @@ export default function App() {
         return {
           ...d,
           status: isDownloaded ? 'loaded' as const : 'unloaded' as const,
-          // Update VRAM if we have running info
           vram: isRunning
             ? +(running.find(r => r.name === d.modelTag || r.name.startsWith(d.modelTag.split(':')[0]))?.size_vram ?? d.vram * 1e9) / 1e9
             : d.vram,
@@ -147,98 +136,75 @@ export default function App() {
 
   useEffect(() => {
     refreshStatus();
-    const interval = setInterval(refreshStatus, 10_000); // poll every 10s
+    const interval = setInterval(refreshStatus, 10_000);
     return () => clearInterval(interval);
   }, [refreshStatus]);
 
-  // ── Lookup helper: model id → model tag ────────────────────────────
-  const getModelTag = (modelId: string): string => {
-    return MODEL_DEFS.find(d => d.id === modelId)?.modelTag ?? modelId;
-  };
-
-  // ── Selection logic ────────────────────────────────────────────────
-
-  const handleToggleModel = (modelId: string) => {
-    if (mode === 'single') {
-      setSelectedModels([modelId]);
-      setActiveModel(modelId);
-    } else {
-      setSelectedModels(prev =>
-        prev.includes(modelId)
-          ? prev.filter(id => id !== modelId)
-          : [...prev, modelId]
-      );
-    }
-  };
-
-  const handleSelectModel = (modelId: string) => {
-    setActiveModel(modelId);
-    if (mode === 'single') {
-      setSelectedModels([modelId]);
-    } else {
-      if (!selectedModels.includes(modelId)) {
-        setSelectedModels(prev => [...prev, modelId]);
+  // Fetch disabled models on startup
+  useEffect(() => {
+    getDisabledModels().then((disabled) => {
+      if (disabled.length > 0) {
+        const disabledIds = new Set(
+          MODEL_DEFS.filter(d => disabled.includes(d.modelTag)).map(d => d.id)
+        );
+        setEnabledModels(prev => {
+          const next = new Set(prev);
+          disabledIds.forEach(id => next.delete(id));
+          return next;
+        });
       }
+    });
+  }, []);
+
+  // ── Model toggle — sync with backend ──────────────────────────────
+  const handleToggleModel = async (modelId: string) => {
+    const def = MODEL_DEFS.find(d => d.id === modelId);
+    if (!def) return;
+
+    const newEnabled = !enabledModels.has(modelId);
+
+    // Optimistic UI update
+    setEnabledModels(prev => {
+      const next = new Set(prev);
+      if (newEnabled) {
+        next.add(modelId);
+      } else {
+        next.delete(modelId);
+      }
+      return next;
+    });
+
+    // Tell the backend
+    const result = await toggleModelApi(def.modelTag, newEnabled);
+    if (!result.ok) {
+      // Revert on failure
+      setEnabledModels(prev => {
+        const next = new Set(prev);
+        if (newEnabled) {
+          next.delete(modelId);
+        } else {
+          next.add(modelId);
+        }
+        return next;
+      });
     }
   };
-
-  const handleModeChange = (newMode: 'single' | 'compare') => {
-    setMode(newMode);
-    if (newMode === 'single' && selectedModels.length > 1) {
-      const keep = activeModel && selectedModels.includes(activeModel) ? activeModel : selectedModels[0];
-      setSelectedModels([keep]);
-    }
-  };
-
-  const [chatInput, setChatInput] = useState('');
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
-
-  const handleSelectTemplate = (template: string) => {
-    setChatInput(template);
-  };
-
-  const handleFilesAttached = (files: AttachedFile[]) => {
-    setAttachedFiles(prev => [...prev, ...files]);
-  };
-
-  const handleRemoveFile = (fileId: string) => {
-    setAttachedFiles(prev => prev.filter(f => f.id !== fileId));
-  };
-
-  // Check if active model supports vision
-  const activeModelDef = MODEL_DEFS.find(d => d.id === activeModel);
-  const activeSupportsVision = activeModelDef?.supportsVision ?? false;
 
   return (
     <div className="h-screen flex dark overflow-hidden">
       <ModelSidebar
         models={models}
-        selectedModels={selectedModels}
+        enabledModels={enabledModels}
         onToggleModel={handleToggleModel}
-        onSelectModel={handleSelectModel}
-        activeModel={activeModel}
         backendOnline={backendOnline}
       />
-      <ChatWorkspace
-        selectedModels={selectedModels}
+      <ControlDashboard
+        logs={logs}
+        serverStatus={serverStatus}
+        usageStats={usageStats}
+        onClearLogs={clearLogs}
         models={models}
-        mode={mode}
-        activeModel={activeModel}
-        getModelTag={getModelTag}
-        input={chatInput}
-        setInput={setChatInput}
-        attachedFiles={attachedFiles}
-        onRemoveFile={handleRemoveFile}
-        onClearFiles={() => setAttachedFiles([])}
-        activeSupportsVision={activeSupportsVision}
-      />
-      <TaskPanel
-        mode={mode}
-        onModeChange={handleModeChange}
-        onSelectTemplate={handleSelectTemplate}
-        onFilesAttached={handleFilesAttached}
-        activeSupportsVision={activeSupportsVision}
-        activeModelName={activeModelDef?.name ?? 'None'}
+        enabledModels={enabledModels}
       />
     </div>
   );

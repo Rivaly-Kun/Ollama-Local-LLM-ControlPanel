@@ -1,9 +1,10 @@
-import { Activity, Zap, Cpu, Database, ChevronRight } from "lucide-react";
-import { Checkbox } from "./ui/checkbox";
+import { Power, Cpu, Database, Zap, Server } from "lucide-react";
+import { Switch } from "./ui/switch";
 
 export type Model = {
   id: string;
   name: string;
+  modelTag?: string;
   category: "chat" | "reasoning" | "coding" | "fast" | "embedding";
   status: "loaded" | "unloaded";
   vram: number;
@@ -27,36 +28,35 @@ const categoryMeta: Record<
   embedding: { label: "Embed", color: "#22d3ee", bg: "rgba(34,211,238,0.12)" },
 };
 
-const speedMeta: Record<Model["speed"], { color: string }> = {
-  fast: { color: "#4ade80" },
-  medium: { color: "#facc15" },
-  slow: { color: "#fb923c" },
+const speedMeta: Record<Model["speed"], { color: string; icon: string }> = {
+  fast: { color: "#4ade80", icon: "⚡" },
+  medium: { color: "#facc15", icon: "⚡" },
+  slow: { color: "#fb923c", icon: "⚡" },
 };
 
 type Props = {
   models: Model[];
-  selectedModels: string[];
+  enabledModels: Set<string>;
   onToggleModel: (modelId: string) => void;
-  onSelectModel: (modelId: string) => void;
-  activeModel: string | null;
   backendOnline?: boolean;
 };
 
 export function ModelSidebar({
   models,
-  selectedModels,
+  enabledModels,
   onToggleModel,
-  onSelectModel,
-  activeModel,
   backendOnline = false,
 }: Props) {
-  const loadedCount = models.filter((m) => m.status === "loaded").length;
+  const activeCount = enabledModels.size;
+  const totalVram = models
+    .filter((m) => enabledModels.has(m.id))
+    .reduce((sum, m) => sum + m.vram, 0);
 
   return (
     <div
       style={{
-        width: "17rem",
-        minWidth: "17rem",
+        width: "18rem",
+        minWidth: "18rem",
         background: "linear-gradient(180deg, #0f1117 0%, #12141c 100%)",
         borderRight: "1px solid rgba(255,255,255,0.07)",
         display: "flex",
@@ -78,13 +78,13 @@ export function ModelSidebar({
             display: "flex",
             alignItems: "center",
             gap: "0.5rem",
-            marginBottom: "0.35rem",
+            marginBottom: "0.5rem",
           }}
         >
           <div
             style={{
-              width: 28,
-              height: 28,
+              width: 30,
+              height: 30,
               borderRadius: 8,
               background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
               display: "flex",
@@ -92,21 +92,33 @@ export function ModelSidebar({
               justifyContent: "center",
             }}
           >
-            <Cpu size={15} color="#fff" />
+            <Power size={15} color="#fff" />
           </div>
-          <span
-            style={{
-              color: "#fff",
-              fontWeight: 600,
-              fontSize: "0.9rem",
-              letterSpacing: "0.01em",
-            }}
-          >
-            Model Control Panel
-          </span>
+          <div>
+            <span
+              style={{
+                color: "#fff",
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                letterSpacing: "0.01em",
+                display: "block",
+              }}
+            >
+              LLM Activation
+            </span>
+            <span
+              style={{
+                color: "rgba(255,255,255,0.4)",
+                fontSize: "0.65rem",
+                display: "block",
+              }}
+            >
+              Toggle models on/off
+            </span>
+          </div>
         </div>
 
-        {/* loaded bar */}
+        {/* Active count bar */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <div
             style={{
@@ -120,9 +132,12 @@ export function ModelSidebar({
             <div
               style={{
                 height: "100%",
-                width: `${(loadedCount / models.length) * 100}%`,
+                width: `${(activeCount / Math.max(models.length, 1)) * 100}%`,
                 borderRadius: 99,
-                background: "linear-gradient(90deg,#6366f1,#8b5cf6)",
+                background:
+                  activeCount > 0
+                    ? "linear-gradient(90deg,#4ade80,#22d3ee)"
+                    : "transparent",
                 transition: "width 0.4s ease",
               }}
             />
@@ -134,32 +149,42 @@ export function ModelSidebar({
               whiteSpace: "nowrap",
             }}
           >
-            {loadedCount} / {models.length} loaded
+            {activeCount} / {models.length} active
           </span>
         </div>
 
-        {/* Backend connection status */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "0.35rem",
-          marginTop: "0.45rem",
-        }}>
-          <span style={{
-            width: 6, height: 6, borderRadius: "50%",
-            background: backendOnline ? "#4ade80" : "#ef4444",
-            boxShadow: backendOnline ? "0 0 6px #4ade80" : "0 0 6px #ef4444",
-            display: "inline-block",
-          }} />
-          <span style={{
-            fontSize: "0.68rem",
-            color: backendOnline ? "#4ade80" : "#ef4444",
-            fontWeight: 500,
-          }}>
+        {/* Backend status */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            marginTop: "0.45rem",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: backendOnline ? "#4ade80" : "#ef4444",
+              boxShadow: backendOnline ? "0 0 6px #4ade80" : "0 0 6px #ef4444",
+              display: "inline-block",
+            }}
+          />
+          <span
+            style={{
+              fontSize: "0.68rem",
+              color: backendOnline ? "#4ade80" : "#ef4444",
+              fontWeight: 500,
+            }}
+          >
             {backendOnline ? "Backend connected" : "Backend offline"}
           </span>
         </div>
       </div>
 
-      {/* ── Scrollable list ── */}
+      {/* ── Model list ── */}
       <div
         style={{
           flex: 1,
@@ -168,63 +193,53 @@ export function ModelSidebar({
           display: "flex",
           flexDirection: "column",
           gap: "0.5rem",
-          /* custom scrollbar */
           scrollbarWidth: "thin",
           scrollbarColor: "rgba(255,255,255,0.12) transparent",
         }}
       >
         {models.map((model) => {
-          const isActive = activeModel === model.id;
-          const isSelected = selectedModels.includes(model.id);
+          const isEnabled = enabledModels.has(model.id);
           const cat = categoryMeta[model.category];
           const spd = speedMeta[model.speed];
 
           return (
             <div
               key={model.id}
-              onClick={() => onSelectModel(model.id)}
               style={{
-                padding: "0.65rem 0.75rem",
+                padding: "0.7rem 0.75rem",
                 borderRadius: 10,
-                border: `1px solid ${isActive ? "rgba(99,102,241,0.55)" : "rgba(255,255,255,0.07)"}`,
-                background: isActive
-                  ? "linear-gradient(135deg,rgba(99,102,241,0.18),rgba(139,92,246,0.12))"
-                  : "rgba(255,255,255,0.03)",
-                cursor: "pointer",
-                transition: "all 0.18s ease",
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive)
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "rgba(255,255,255,0.06)";
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive)
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "rgba(255,255,255,0.03)";
+                border: `1px solid ${
+                  isEnabled
+                    ? "rgba(74,222,128,0.35)"
+                    : "rgba(255,255,255,0.07)"
+                }`,
+                background: isEnabled
+                  ? "linear-gradient(135deg,rgba(74,222,128,0.08),rgba(34,211,238,0.05))"
+                  : "rgba(255,255,255,0.02)",
+                transition: "all 0.25s ease",
+                opacity: isEnabled ? 1 : 0.6,
               }}
             >
-              {/* top row: checkbox + name + active arrow */}
+              {/* Top row: name + switch */}
               <div
                 style={{
                   display: "flex",
-                  alignItems: "flex-start",
+                  alignItems: "center",
                   gap: "0.5rem",
                 }}
               >
+                {/* Status indicator */}
                 <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleModel(model.id);
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: isEnabled ? "#4ade80" : "rgba(255,255,255,0.15)",
+                    boxShadow: isEnabled ? "0 0 8px #4ade80" : "none",
+                    transition: "all 0.3s ease",
+                    flexShrink: 0,
                   }}
-                  style={{ marginTop: 2, flexShrink: 0 }}
-                >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onToggleModel(model.id)}
-                  />
-                </div>
+                />
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
@@ -241,44 +256,39 @@ export function ModelSidebar({
                   </div>
                   <div
                     style={{
-                      color: "rgba(255,255,255,0.45)",
-                      fontSize: "0.72rem",
+                      color: "rgba(255,255,255,0.4)",
+                      fontSize: "0.68rem",
                       marginTop: 1,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
                     }}
                   >
                     {model.description}
                   </div>
                 </div>
 
-                {isActive && (
-                  <ChevronRight
-                    size={13}
-                    color="#a78bfa"
-                    style={{ flexShrink: 0, marginTop: 3 }}
-                  />
-                )}
+                {/* ON/OFF Switch */}
+                <Switch
+                  checked={isEnabled}
+                  onCheckedChange={() => onToggleModel(model.id)}
+                />
               </div>
 
-              {/* bottom row: badges */}
+              {/* Bottom row: badges */}
               <div
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "0.4rem",
-                  marginTop: "0.5rem",
-                  marginLeft: "1.5rem",
+                  marginTop: "0.45rem",
+                  marginLeft: "1.2rem",
                   flexWrap: "wrap",
                 }}
               >
                 {/* category pill */}
                 <span
                   style={{
-                    fontSize: "0.65rem",
+                    fontSize: "0.6rem",
                     fontWeight: 600,
-                    padding: "0.15rem 0.45rem",
+                    padding: "0.12rem 0.4rem",
                     borderRadius: 99,
                     background: cat.bg,
                     color: cat.color,
@@ -290,53 +300,34 @@ export function ModelSidebar({
                   {cat.label}
                 </span>
 
-                {/* status */}
-                {model.status === "loaded" ? (
+                {/* download status */}
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 3,
+                    fontSize: "0.6rem",
+                    color:
+                      model.status === "loaded"
+                        ? "#4ade80"
+                        : "rgba(255,255,255,0.3)",
+                    fontWeight: 500,
+                  }}
+                >
                   <span
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 3,
-                      fontSize: "0.65rem",
-                      color: "#4ade80",
-                      fontWeight: 500,
+                      width: 4,
+                      height: 4,
+                      borderRadius: "50%",
+                      background:
+                        model.status === "loaded"
+                          ? "#4ade80"
+                          : "rgba(255,255,255,0.2)",
+                      display: "inline-block",
                     }}
-                  >
-                    <span
-                      style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: "50%",
-                        background: "#4ade80",
-                        boxShadow: "0 0 4px #4ade80",
-                        display: "inline-block",
-                      }}
-                    />
-                    Loaded
-                  </span>
-                ) : (
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 3,
-                      fontSize: "0.65rem",
-                      color: "rgba(255,255,255,0.3)",
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 5,
-                        height: 5,
-                        borderRadius: "50%",
-                        background: "rgba(255,255,255,0.2)",
-                        display: "inline-block",
-                      }}
-                    />
-                    Unloaded
-                  </span>
-                )}
+                  />
+                  {model.status === "loaded" ? "Downloaded" : "Not downloaded"}
+                </span>
 
                 {/* vram */}
                 <span
@@ -344,11 +335,11 @@ export function ModelSidebar({
                     display: "flex",
                     alignItems: "center",
                     gap: 2,
-                    fontSize: "0.65rem",
+                    fontSize: "0.6rem",
                     color: "rgba(255,255,255,0.35)",
                   }}
                 >
-                  <Database size={9} />
+                  <Database size={8} />
                   {model.vram}GB
                 </span>
 
@@ -358,18 +349,78 @@ export function ModelSidebar({
                     display: "flex",
                     alignItems: "center",
                     gap: 2,
-                    fontSize: "0.65rem",
+                    fontSize: "0.6rem",
                     color: spd.color,
                     fontWeight: 500,
                   }}
                 >
-                  <Zap size={9} />
+                  <Zap size={8} />
                   {model.speed}
                 </span>
               </div>
             </div>
           );
         })}
+      </div>
+
+      {/* ── Footer summary ── */}
+      <div
+        style={{
+          padding: "0.75rem 1rem",
+          borderTop: "1px solid rgba(255,255,255,0.07)",
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                color: "rgba(255,255,255,0.35)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Total VRAM (active)
+            </div>
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: totalVram > 0 ? "#22d3ee" : "rgba(255,255,255,0.3)",
+              }}
+            >
+              {totalVram.toFixed(1)} GB
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div
+              style={{
+                fontSize: "0.65rem",
+                color: "rgba(255,255,255,0.35)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Active Models
+            </div>
+            <div
+              style={{
+                fontSize: "1rem",
+                fontWeight: 700,
+                color: activeCount > 0 ? "#4ade80" : "rgba(255,255,255,0.3)",
+              }}
+            >
+              {activeCount}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -4,6 +4,35 @@
 
 const BASE = '/api';
 
+let cachedAuthKey: string | null = null;
+let authKeyPromise: Promise<string | null> | null = null;
+
+async function getAuthKey(): Promise<string | null> {
+  if (cachedAuthKey) return cachedAuthKey;
+  if (!authKeyPromise) {
+    authKeyPromise = fetch(`${BASE}/authkey`)
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = await res.json();
+        const key = typeof data.api_key === 'string' ? data.api_key : null;
+        if (key) cachedAuthKey = key;
+        return key;
+      })
+      .catch(() => null)
+      .finally(() => {
+        authKeyPromise = null;
+      });
+  }
+  return authKeyPromise;
+}
+
+async function withAuthHeaders(
+  extra: Record<string, string> = {}
+): Promise<Record<string, string>> {
+  const key = await getAuthKey();
+  return key ? { ...extra, Authorization: `Bearer ${key}` } : { ...extra };
+}
+
 // ── Types ────────────────────────────────────────────────────────────
 
 export type LLMModel = {
@@ -40,7 +69,9 @@ export type ChatMessage = {
 // ── List all available models (/api/tags) ────────────────────────────
 
 export async function listModels(): Promise<LLMModel[]> {
-  const res = await fetch(`${BASE}/tags`);
+  const res = await fetch(`${BASE}/tags`, {
+    headers: await withAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`/api/tags failed: ${res.status}`);
   const data = await res.json();
   return data.models ?? [];
@@ -49,7 +80,9 @@ export async function listModels(): Promise<LLMModel[]> {
 // ── List currently-loaded (running) models (/api/ps) ─────────────────
 
 export async function listRunningModels(): Promise<RunningModel[]> {
-  const res = await fetch(`${BASE}/ps`);
+  const res = await fetch(`${BASE}/ps`, {
+    headers: await withAuthHeaders(),
+  });
   if (!res.ok) throw new Error(`/api/ps failed: ${res.status}`);
   const data = await res.json();
   return data.models ?? [];
@@ -63,7 +96,7 @@ export async function chatCompletion(
 ): Promise<{ content: string; totalDuration: number; evalCount: number }> {
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await withAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ model, messages, stream: false }),
   });
 
@@ -91,7 +124,7 @@ export async function chatCompletionStream(
 ): Promise<void> {
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await withAuthHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ model, messages, stream: true }),
     signal,
   });
@@ -157,11 +190,46 @@ export async function downloadModel(modelTag: string): Promise<boolean> {
   try {
     const res = await fetch(`${BASE}/download`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await withAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ model: modelTag }),
     });
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// ── Toggle model enabled/disabled ────────────────────────────────────
+
+export async function toggleModel(
+  modelTag: string,
+  enabled: boolean,
+): Promise<{ ok: boolean; disabledModels: string[] }> {
+  try {
+    const res = await fetch(`${BASE}/models/toggle`, {
+      method: 'PUT',
+      headers: await withAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ model: modelTag, enabled }),
+    });
+    if (!res.ok) return { ok: false, disabledModels: [] };
+    const data = await res.json();
+    return { ok: true, disabledModels: data.disabled_models ?? [] };
+  } catch {
+    return { ok: false, disabledModels: [] };
+  }
+}
+
+// ── Get disabled models list ─────────────────────────────────────────
+
+export async function getDisabledModels(): Promise<string[]> {
+  try {
+    const res = await fetch(`${BASE}/models/status`, {
+      headers: await withAuthHeaders(),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.disabled_models ?? [];
+  } catch {
+    return [];
   }
 }

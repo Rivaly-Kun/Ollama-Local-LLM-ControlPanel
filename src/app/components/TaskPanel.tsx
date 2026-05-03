@@ -9,6 +9,7 @@ import {
   FileText,
   X,
   AlertTriangle,
+  Terminal,
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -18,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import type { AttachedFile } from '../App';
+import { ServerLogsPanel } from './ServerLogsPanel';
+import type { LogEntry, ServerStatus, UsageStats } from '../services/serverLogs';
 
 type Props = {
   mode: 'single' | 'compare';
@@ -26,7 +29,14 @@ type Props = {
   onFilesAttached: (files: AttachedFile[]) => void;
   activeSupportsVision: boolean;
   activeModelName: string;
+  // Server logs props
+  logs: LogEntry[];
+  serverStatus: ServerStatus;
+  usageStats: UsageStats;
+  onClearLogs: () => void;
 };
+
+type Tab = 'settings' | 'logs';
 
 const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 const TEXT_TYPES = ['text/plain', 'text/markdown', 'text/csv', 'application/json'];
@@ -57,7 +67,19 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-export function TaskPanel({ mode, onModeChange, onSelectTemplate, onFilesAttached, activeSupportsVision, activeModelName }: Props) {
+export function TaskPanel({
+  mode,
+  onModeChange,
+  onSelectTemplate,
+  onFilesAttached,
+  activeSupportsVision,
+  activeModelName,
+  logs,
+  serverStatus,
+  usageStats,
+  onClearLogs,
+}: Props) {
+  const [activeTab, setActiveTab] = useState<Tab>('settings');
   const [contextMemory, setContextMemory] = useState(true);
   const [autoRoute, setAutoRoute] = useState(true);
   const [showLatency, setShowLatency] = useState(true);
@@ -90,185 +112,311 @@ export function TaskPanel({ mode, onModeChange, onSelectTemplate, onFilesAttache
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  // Server status indicator for the tab
+  const statusColor = serverStatus === 'online' ? '#4ade80' : serverStatus === 'offline' ? '#ef4444' : '#facc15';
+
   return (
     <div className="w-72 bg-card border-l border-border flex flex-col h-full shrink-0 overflow-hidden">
-      <div className="p-4 border-b border-border">
-        <h2 className="flex items-center gap-2 text-white">
-          <Settings className="w-5 h-5" />
-          Task Router & Settings
-        </h2>
+      {/* ── Tab Header ── */}
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={() => setActiveTab('settings')}
+          style={{
+            flex: 1,
+            padding: '0.75rem 0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem',
+            background: activeTab === 'settings'
+              ? 'rgba(99,102,241,0.12)'
+              : 'transparent',
+            borderBottom: activeTab === 'settings'
+              ? '2px solid #6366f1'
+              : '2px solid transparent',
+            color: activeTab === 'settings'
+              ? '#fff'
+              : 'rgba(255,255,255,0.45)',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.18s ease',
+            border: 'none',
+            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
+          }}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'settings') {
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'settings') {
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)';
+            }
+          }}
+        >
+          <Settings style={{ width: 14, height: 14 }} />
+          Settings
+        </button>
+        <button
+          onClick={() => setActiveTab('logs')}
+          style={{
+            flex: 1,
+            padding: '0.75rem 0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem',
+            background: activeTab === 'logs'
+              ? 'rgba(99,102,241,0.12)'
+              : 'transparent',
+            borderBottom: activeTab === 'logs'
+              ? '2px solid #6366f1'
+              : '2px solid transparent',
+            color: activeTab === 'logs'
+              ? '#fff'
+              : 'rgba(255,255,255,0.45)',
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.18s ease',
+            border: 'none',
+            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
+          }}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'logs') {
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.7)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'logs') {
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)';
+            }
+          }}
+        >
+          <Terminal style={{ width: 14, height: 14 }} />
+          Server Logs
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: statusColor,
+              boxShadow: `0 0 4px ${statusColor}`,
+              display: 'inline-block',
+            }}
+          />
+        </button>
       </div>
 
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="p-4 space-y-6">
-          {/* Mode Selection */}
-          <div>
-            <Label className="mb-3 block text-white">Interaction Mode</Label>
-            <div className="grid grid-cols-1 gap-2">
-              <Button
-                variant={mode === 'single' ? 'default' : 'outline'}
-                className="justify-start"
-                onClick={() => onModeChange('single')}
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Single Model
-              </Button>
-              <Button
-                variant={mode === 'compare' ? 'default' : 'outline'}
-                className="justify-start"
-                onClick={() => onModeChange('compare')}
-              >
-                <Layers className="w-4 h-4 mr-2" />
-                Dual AI Mode
-              </Button>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Prompt Templates */}
-          <div>
-            <Label className="mb-3 block text-white">Quick Templates</Label>
-            <Select onValueChange={onSelectTemplate}>
-              <SelectTrigger className="text-white">
-                <SelectValue placeholder="Select a template..." />
-              </SelectTrigger>
-              <SelectContent className="bg-[#12141c] text-white border-white/10">
-                {promptTemplates.map((template) => (
-                  <SelectItem 
-                    key={template} 
-                    value={template} 
-                    className="focus:bg-white/10 focus:text-white cursor-pointer"
-                  >
-                    {template}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          {/* Settings */}
-          <div className="space-y-4">
-            <Label className="text-white">Features</Label>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm text-white">Context Memory</Label>
-                <p className="text-xs text-gray-500">Maintain conversation history</p>
+      {/* ── Tab Content ── */}
+      {activeTab === 'settings' ? (
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-4 space-y-6">
+            {/* Mode Selection */}
+            <div>
+              <Label className="mb-3 block text-white">Interaction Mode</Label>
+              <div className="grid grid-cols-1 gap-2">
+                <Button
+                  variant={mode === 'single' ? 'default' : 'outline'}
+                  className="justify-start"
+                  onClick={() => onModeChange('single')}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Single Model
+                </Button>
+                <Button
+                  variant={mode === 'compare' ? 'default' : 'outline'}
+                  className="justify-start"
+                  onClick={() => onModeChange('compare')}
+                >
+                  <Layers className="w-4 h-4 mr-2" />
+                  Dual AI Mode
+                </Button>
               </div>
-              <Switch checked={contextMemory} onCheckedChange={setContextMemory} />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm text-white">Auto-routing</Label>
-                <p className="text-xs text-gray-500">Select best model for task</p>
-              </div>
-              <Switch checked={autoRoute} onCheckedChange={setAutoRoute} />
+            <Separator />
+
+            {/* Prompt Templates */}
+            <div>
+              <Label className="mb-3 block text-white">Quick Templates</Label>
+              <Select onValueChange={onSelectTemplate}>
+                <SelectTrigger className="text-white">
+                  <SelectValue placeholder="Select a template..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#12141c] text-white border-white/10">
+                  {promptTemplates.map((template) => (
+                    <SelectItem 
+                      key={template} 
+                      value={template} 
+                      className="focus:bg-white/10 focus:text-white cursor-pointer"
+                    >
+                      {template}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label className="text-sm text-white">Show Metrics</Label>
-                <p className="text-xs text-gray-500">Display latency & tokens</p>
-              </div>
-              <Switch checked={showLatency} onCheckedChange={setShowLatency} />
-            </div>
-          </div>
+            <Separator />
 
-          <Separator />
+            {/* Settings */}
+            <div className="space-y-4">
+              <Label className="text-white">Features</Label>
 
-          {/* File Upload */}
-          <div>
-            <Label className="mb-3 block text-white">Upload Files</Label>
-            
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept={ALL_ACCEPT}
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              Upload Document
-            </Button>
-
-            {/* Vision model info */}
-            <div className="mt-3 space-y-2">
-              <div className="flex items-center gap-1.5">
-                <ImageIcon className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs text-gray-400">Image support:</span>
-                {activeSupportsVision ? (
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-green-500/15 text-green-400 border-green-500/30">
-                    ✓ {activeModelName}
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-yellow-500/15 text-yellow-400 border-yellow-500/30">
-                    ✗ Not supported
-                  </Badge>
-                )}
-              </div>
-              {!activeSupportsVision && (
-                <div className="flex items-start gap-1.5 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
-                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-yellow-400/90">
-                    Text files work with all models. Vision support is not currently available.
-                  </p>
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-white">Context Memory</Label>
+                  <p className="text-xs text-gray-500">Maintain conversation history</p>
                 </div>
-              )}
-              <p className="text-xs text-gray-500">
-                Supports: .png, .jpg, .gif, .webp, .txt, .md, .csv, .json
-              </p>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Stats */}
-          <div>
-            <Label className="mb-3 block text-white">Session Stats</Label>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Total Queries</span>
-                <Badge variant="secondary">0</Badge>
+                <Switch checked={contextMemory} onCheckedChange={setContextMemory} />
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Avg Latency</span>
-                <Badge variant="secondary">--ms</Badge>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-white">Auto-routing</Label>
+                  <p className="text-xs text-gray-500">Select best model for task</p>
+                </div>
+                <Switch checked={autoRoute} onCheckedChange={setAutoRoute} />
               </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Total Tokens</span>
-                <Badge variant="secondary">0</Badge>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm text-white">Show Metrics</Label>
+                  <p className="text-xs text-gray-500">Display latency & tokens</p>
+                </div>
+                <Switch checked={showLatency} onCheckedChange={setShowLatency} />
               </div>
             </div>
-          </div>
 
-          <Separator />
+            <Separator />
 
-          {/* API Endpoint */}
-          <div>
-            <Label className="mb-2 block text-white">Backend Endpoint</Label>
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-gray-400" />
-              <code className="text-xs bg-muted px-2 py-1 rounded text-white">localhost:8321</code>
+            {/* File Upload */}
+            <div>
+              <Label className="mb-3 block text-white">Upload Files</Label>
+              
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept={ALL_ACCEPT}
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Document
+              </Button>
+
+              {/* Vision model info */}
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <ImageIcon className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-xs text-gray-400">Image support:</span>
+                  {activeSupportsVision ? (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-green-500/15 text-green-400 border-green-500/30">
+                      ✓ {activeModelName}
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0 bg-yellow-500/15 text-yellow-400 border-yellow-500/30">
+                      ✗ Not supported
+                    </Badge>
+                  )}
+                </div>
+                {!activeSupportsVision && (
+                  <div className="flex items-start gap-1.5 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                    <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-400/90">
+                      Text files work with all models. Vision support is not currently available.
+                    </p>
+                  </div>
+                )}
+                <p className="text-xs text-gray-500">
+                  Supports: .png, .jpg, .gif, .webp, .txt, .md, .csv, .json
+                </p>
+              </div>
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs text-green-500">Connected</span>
+
+            <Separator />
+
+            {/* Stats */}
+            <div>
+              <Label className="mb-3 block text-white">Session Stats</Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Total Queries</span>
+                  <Badge variant="secondary">{usageStats.totalRequests}</Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Avg Latency</span>
+                  <Badge variant="secondary">
+                    {usageStats.avgLatencyMs ? `${usageStats.avgLatencyMs}ms` : '--ms'}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Total Tokens</span>
+                  <Badge variant="secondary">{usageStats.totalTokens.toLocaleString()}</Badge>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* API Endpoint */}
+            <div>
+              <Label className="mb-2 block text-white">Backend Endpoint</Label>
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-gray-400" />
+                <code className="text-xs bg-muted px-2 py-1 rounded text-white">localhost:8321</code>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <div
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: statusColor,
+                    boxShadow: `0 0 6px ${statusColor}`,
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '0.75rem',
+                    color: statusColor,
+                  }}
+                >
+                  {serverStatus === 'online' ? 'Connected' : serverStatus === 'offline' ? 'Disconnected' : 'Connecting...'}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      ) : (
+        /* ── Server Logs Tab ── */
+        <ServerLogsPanel
+          logs={logs}
+          serverStatus={serverStatus}
+          usageStats={usageStats}
+          onClear={onClearLogs}
+        />
+      )}
     </div>
   );
 }

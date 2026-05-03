@@ -1,0 +1,22 @@
+# ── Cloudflare Tunnel configuration ──────────────────────────────────
+#
+# Prerequisites:
+#   1. Install cloudflared  →  winget install Cloudflare.cloudflared
+#   2. Authenticate         →  cloudflared tunnel login
+#   3. Create a tunnel      →  cloudflared tunnel create controlpanel-eflow
+#   4. Route DNS            →  cloudflared tunnel route dns controlpanel-eflow my-domain.com
+#   5. Replace <TUNNEL-ID> and <my-domain> below with your real values.
+#
+# Start the tunnel:
+#   cloudflared tunnel --config cloudflared.yml run
+# ─────────────────────────────────────────────────────────────────────
+
+tunnel: <TUNNEL-ID>
+credentials-file: C:\Users\gabri\.cloudflared\<TUNNEL-ID>.json
+
+ingress:
+  # Forward all traffic to the local FastAPI server
+  - hostname: <my-domain>
+    service: http://localhost:8321
+  # Catch-all (required by cloudflared)
+  - service: http_status:404
